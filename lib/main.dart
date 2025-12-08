@@ -248,7 +248,7 @@ class _OleraHomePageState extends State<OleraHomePage>
                 'Version 1.0 • CyberSecurity Research LAB\n'
                 'Dept. of Computer Science and Engineering (CSE), Jashore University of Science and Technology (JUST)\n'
                 'Email: n.amin@just.edu.bd • Phone: +880 01714-492550\n'
-                'Kazi Nazrul Academic Building, Room NO: 227, Jashore-7408, Bangladesh',
+                'Kazi Nazrul Islam Academic Building, Room NO: 227, Jashore-7408, Bangladesh',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: Colors.black54),
               ),

@@ -363,7 +363,7 @@ class _GenerateLetterPageState extends State<GenerateLetterPage> {
               // LEFT aligned contact info
               pw.Text(
                 'Email: n.amin@just.edu.bd,  Phone: +880 01714-492550, '
-                'Kazi Nazrul Academic Building, Room NO: 227, Jashore University of Science and Technology, Jashore 7408, Bangladesh',
+                'Kazi Nazrul Islam Academic Building, Room No: 227, Jashore University of Science and Technology, Jashore 7408, Bangladesh',
                 style: pw.TextStyle(
                   font: regular,
                   fontSize: 10,
