@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:rmpdf/student_work_tracker.dart';
 import 'generate_letter_page.dart';
 
 const Color primaryBlue = Color(0xFF1E88E5);
@@ -231,6 +232,34 @@ class _OleraHomePageState extends State<OleraHomePage>
               style: ElevatedButton.styleFrom(
                 backgroundColor: highlightYellow,
                 foregroundColor: Colors.black87,
+                minimumSize: const Size(double.infinity, 70),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 10,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+              ),
+            ),
+            const SizedBox(height: 60),
+
+            // Start Generating Button
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const StudentWorkTracker(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_circle, size: 32),
+              label: const Text(
+                'Start Student Work Tracker',
+                style: TextStyle(fontSize: 20),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 114, 79, 243),
+                foregroundColor: const Color.fromARGB(221, 255, 255, 255),
                 minimumSize: const Size(double.infinity, 70),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
