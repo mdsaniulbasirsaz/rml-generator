@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = 'https://rml-generator-server.onrender.com/api/v1';
   static const Duration timeout = Duration(seconds: 10);
   
   static final ApiService _instance = ApiService._internal();
