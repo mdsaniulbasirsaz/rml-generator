@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:rmpdf/student_add.dart';
+import 'package:rmpdf/visualize_dashboard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'api/api_service.dart';
 
 /// Jira-Style Kanban Board Student Work Tracker - Clean White Theme with Additional Columns
 class StudentWorkTracker extends StatefulWidget {
@@ -14,39 +17,190 @@ class StudentWorkTracker extends StatefulWidget {
 
 class _StudentWorkTrackerState extends State<StudentWorkTracker> {
   final StorageService _storage = StorageService();
+  final ApiService _api = ApiService();
   List<Student> _students = [];
   List<Task> _tasks = [];
   bool _isSupervisor = true;
   String? _selectedStudentId;
   bool _isLoading = true;
   bool _isDragging = false;
+  bool _isOnline = true;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _initializeData();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _initializeData() async {
     setState(() => _isLoading = true);
-    _students = await _storage.loadStudents();
-    _tasks = await _storage.loadTasks();
+    
+    try {
+      // Try to sync local data first
+      await _storage.syncLocalData();
+      
+      // Load from API
+      await _loadDataFromApi();
+      _isOnline = true;
+    } catch (e) {
+      print('API Error: $e');
+      _isOnline = false;
+      // Fallback to local storage
+      await _loadDataFromLocal();
+    }
+    
     if (!_isSupervisor && _students.isNotEmpty) {
       _selectedStudentId ??= _students.first.id;
     }
+    
     setState(() => _isLoading = false);
   }
 
-  Future<void> _saveTasks() => _storage.saveTasks(_tasks);
+  Future<void> _loadDataFromApi() async {
+    try {
+      // Load students from API
+      final studentsData = await _api.getStudents();
+      _students = studentsData.map((json) => Student.fromApiJson(json)).toList();
+      
+      // Load tasks from API
+      final tasksData = await _api.getTasks();
+      _tasks = tasksData.map((json) => Task.fromApiJson(json)).toList();
+    } catch (e) {
+      throw Exception('Failed to load data from API: $e');
+    }
+  }
 
-  void _updateTaskStatus(Task task, TaskStatus newStatus) {
+  Future<void> _loadDataFromLocal() async {
+    _students = await _storage.loadStudents();
+    _tasks = await _storage.loadTasks();
+  }
+
+  Future<void> _refreshData() async {
+    try {
+      await _loadDataFromApi();
+      _isOnline = true;
+      setState(() {});
+    } catch (e) {
+      _isOnline = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Offline mode - Using cached data'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveTask(Task task) async {
+    try {
+      if (task.id.startsWith('local_')) {
+        // New task - create via API
+        final taskData = task.toApiJson();
+        final response = await _api.createTask(taskData);
+        final newTask = Task.fromApiJson(response);
+        
+        setState(() {
+          final index = _tasks.indexWhere((t) => t.id == task.id);
+          if (index != -1) _tasks[index] = newTask;
+        });
+      } else {
+        // Existing task - update via API
+        final taskData = task.toApiJson();
+        final response = await _api.updateTask(task.id, taskData);
+        final updatedTask = Task.fromApiJson(response);
+        
+        setState(() {
+          final index = _tasks.indexWhere((t) => t.id == task.id);
+          if (index != -1) _tasks[index] = updatedTask;
+        });
+      }
+      
+      // Save to local storage as backup
+      await _storage.saveTask(task);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Task saved successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error saving task: $e');
+      // Save locally as fallback
+      await _storage.saveTask(task);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Task saved locally (offline)'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  Future<void> _updateTaskStatus(Task task, TaskStatus newStatus) async {
+    final oldStatus = task.status;
+    
+    // Optimistic update
     setState(() {
       task.status = newStatus;
       if (newStatus == TaskStatus.done) {
         task.completionDate = DateTime.now();
       }
     });
-    _saveTasks();
+    
+    try {
+      // Update via API
+      await _api.updateTaskStatus(task.id, Task._statusToString(newStatus));
+      await _storage.saveTask(task);
+    } catch (e) {
+      print('Error updating task status: $e');
+      // Revert on failure
+      setState(() {
+        task.status = oldStatus;
+        if (newStatus == TaskStatus.done) {
+          task.completionDate = null;
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Status update failed - using local data'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteTask(Task task) async {
+    final taskToDelete = task;
+    
+    // Optimistic removal
+    setState(() => _tasks.remove(task));
+    
+    try {
+      // Delete via API
+      await _api.deleteTask(task.id);
+      await _storage.deleteTask(task.id);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Task deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error deleting task: $e');
+      // Re-add on failure
+      setState(() => _tasks.add(taskToDelete));
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete task'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _onDragStarted() {
@@ -94,6 +248,16 @@ class _StudentWorkTrackerState extends State<StudentWorkTracker> {
                   fontSize: 16,
                 ),
               ),
+              if (!_isOnline) ...[
+                SizedBox(height: 10),
+                Text(
+                  'Offline Mode',
+                  style: TextStyle(
+                    color: Colors.orange.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+              ]
             ],
           ),
         ),
@@ -114,7 +278,32 @@ class _StudentWorkTrackerState extends State<StudentWorkTracker> {
           if (!_isSupervisor) _buildStudentSelector(),
           const SizedBox(height: 8),
           _buildStatsBar(),
-          const SizedBox(height: 16),
+          if (!_isOnline)
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.orange.shade700, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    'Offline Mode - Changes saved locally',
+                    style: TextStyle(
+                      color: Colors.orange.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
           Expanded(
             child: KanbanBoard(
               tasks: tasksToShow,
@@ -122,30 +311,7 @@ class _StudentWorkTrackerState extends State<StudentWorkTracker> {
               isSupervisor: _isSupervisor,
               onStatusChanged: _updateTaskStatus,
               onEdit: (task) => _showTaskDialog(task: task),
-              onDelete: (task) {
-                setState(() => _tasks.remove(task));
-                _saveTasks();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('Task deleted successfully'),
-                      ],
-                    ),
-                    backgroundColor: Colors.green.shade600,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                );
-              },
+              onDelete: _deleteTask,
               onDragStarted: _onDragStarted,
               onDragEnded: _onDragEnded,
             ),
@@ -173,11 +339,7 @@ class _StudentWorkTrackerState extends State<StudentWorkTracker> {
   }
 
   Widget _buildStatsBar() {
-    // final todoCount = _tasks.where((t) => t.status == TaskStatus.backlog).length;
-    // final pendingCount = _tasks.where((t) => t.status == TaskStatus.pending).length;
     final inProgressCount = _tasks.where((t) => t.status == TaskStatus.inProgress).length;
-    // final reviewCount = _tasks.where((t) => t.status == TaskStatus.review).length;
-    // final testingCount = _tasks.where((t) => t.status == TaskStatus.testing).length;
     final doneCount = _tasks.where((t) => t.status == TaskStatus.done).length;
     final overdueCount = _tasks.where((t) => t.isOverdue() && t.status != TaskStatus.done).length;
 
@@ -212,6 +374,59 @@ class _StudentWorkTrackerState extends State<StudentWorkTracker> {
           _buildStatItem('Overdue', overdueCount.toString(), Colors.red.shade600),
           _buildStatItem('In Progress', inProgressCount.toString(), Colors.orange.shade600),
           _buildStatItem('Done', doneCount.toString(), Colors.green.shade600),
+          const Spacer(),
+          // Add New Student Button
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const StudentDashboard(),
+                  ),
+                );
+            },
+            icon: Icon(Icons.person_add, size: 16),
+            label: Text('Add New Student'),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              backgroundColor: Colors.blue.shade600,
+              foregroundColor: Colors.white,
+              textStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Visualize Progress Button
+          ElevatedButton.icon(
+            onPressed: () {
+             Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const VisualizeDashboardPage(),
+                  ),
+                );
+            },
+            icon: Icon(Icons.analytics, size: 16),
+            label: Text('Visualize Progress'),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              backgroundColor: Colors.purple.shade600,
+              foregroundColor: Colors.white,
+              textStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Existing Refresh Button
+          IconButton(
+            icon: Icon(Icons.refresh, size: 18),
+            onPressed: _refreshData,
+            tooltip: 'Refresh data',
+          ),
         ],
       ),
     );
@@ -272,7 +487,7 @@ class _StudentWorkTrackerState extends State<StudentWorkTracker> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _isSupervisor ? 'Kanban Board' : 'My Tasks',
+                _isSupervisor ? 'Kanban Board' : 'Kanban Board',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 20,
@@ -429,7 +644,12 @@ class _StudentWorkTrackerState extends State<StudentWorkTracker> {
       builder: (_) => TaskDialog(
         task: task,
         students: _students,
-        onSave: (newTask) {
+        onSave: (newTask) async {
+          // If task is null, it's a new task - generate local ID
+          if (task == null) {
+            newTask.id = 'local_${DateTime.now().millisecondsSinceEpoch}';
+          }
+          
           setState(() {
             if (task == null) {
               _tasks.add(newTask);
@@ -438,7 +658,8 @@ class _StudentWorkTrackerState extends State<StudentWorkTracker> {
               if (i != -1) _tasks[i] = newTask;
             }
           });
-          _saveTasks();
+          
+          await _saveTask(newTask);
           Navigator.pop(context);
         },
       ),
@@ -1697,7 +1918,7 @@ class _TaskDialogState extends State<TaskDialog> {
 }
 
 // ============================================================================
-// SUPPORTING CLASSES - UPDATED WITH MORE STATUSES
+// SUPPORTING CLASSES
 // ============================================================================
 
 class Student {
@@ -1708,9 +1929,20 @@ class Student {
   Student({required this.id, required this.name, required this.email});
 
   Map<String, dynamic> toJson() => {'id': id, 'name': name, 'email': email};
+  
+  Map<String, dynamic> toApiJson() => {
+    'name': name,
+    'email': email,
+  };
 
   factory Student.fromJson(Map<String, dynamic> json) => Student(
         id: json['id'],
+        name: json['name'],
+        email: json['email'],
+      );
+      
+  factory Student.fromApiJson(Map<String, dynamic> json) => Student(
+        id: json['_id'],
         name: json['name'],
         email: json['email'],
       );
@@ -1721,7 +1953,7 @@ enum TaskStatus { backlog, pending, inProgress, review, testing, done, archived 
 enum TaskPriority { low, medium, high }
 
 class Task {
-  final String id;
+  String id;
   String title, description, assignedStudentId;
   DateTime startDate, dueDate;
   TaskPriority priority;
@@ -1768,6 +2000,20 @@ class Task {
         'completionNote': completionNote,
         'completionDate': completionDate?.toIso8601String(),
       };
+      
+  Map<String, dynamic> toApiJson() {
+    return {
+      'title': title,
+      'description': description,
+      'assigned_student_id': assignedStudentId,
+      'start_date': startDate.toIso8601String(),
+      'due_date': dueDate.toIso8601String(),
+      'priority': _priorityToString(priority),
+      'status': _statusToString(status),
+      'completion_note': completionNote,
+      'completion_date': completionDate?.toIso8601String(),
+    };
+  }
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
         id: json['id'],
@@ -1783,23 +2029,69 @@ class Task {
             ? DateTime.parse(json['completionDate'])
             : null,
       );
+      
+  factory Task.fromApiJson(Map<String, dynamic> json) {
+    return Task(
+      id: json['_id'],
+      title: json['title'],
+      description: json['description'],
+      assignedStudentId: json['assigned_student_id'],
+      startDate: DateTime.parse(json['start_date']),
+      dueDate: DateTime.parse(json['due_date']),
+      priority: _stringToPriority(json['priority']),
+      status: _stringToStatus(json['status']),
+      completionNote: json['completion_note'],
+      completionDate: json['completion_date'] != null 
+          ? DateTime.parse(json['completion_date']) 
+          : null,
+    );
+  }
+
+  static String _priorityToString(TaskPriority priority) {
+    switch (priority) {
+      case TaskPriority.low: return 'low';
+      case TaskPriority.medium: return 'medium';
+      case TaskPriority.high: return 'high';
+    }
+  }
+  
+  static TaskPriority _stringToPriority(String priority) {
+    switch (priority) {
+      case 'low': return TaskPriority.low;
+      case 'medium': return TaskPriority.medium;
+      case 'high': return TaskPriority.high;
+      default: return TaskPriority.medium;
+    }
+  }
+  
+  static String _statusToString(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.backlog: return 'backlog';
+      case TaskStatus.pending: return 'pending';
+      case TaskStatus.inProgress: return 'in_progress';
+      case TaskStatus.review: return 'review';
+      case TaskStatus.testing: return 'testing';
+      case TaskStatus.done: return 'done';
+      case TaskStatus.archived: return 'archived';
+    }
+  }
+  
+  static TaskStatus _stringToStatus(String status) {
+    switch (status) {
+      case 'backlog': return TaskStatus.backlog;
+      case 'pending': return TaskStatus.pending;
+      case 'in_progress': return TaskStatus.inProgress;
+      case 'review': return TaskStatus.review;
+      case 'testing': return TaskStatus.testing;
+      case 'done': return TaskStatus.done;
+      case 'archived': return TaskStatus.archived;
+      default: return TaskStatus.pending;
+    }
+  }
 }
 
 class StorageService {
   static const _studentsKey = 'students', _tasksKey = 'tasks';
-
-  Future<void> saveTasks(List<Task> tasks) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        _tasksKey, jsonEncode(tasks.map((t) => t.toJson()).toList()));
-  }
-
-  Future<List<Task>> loadTasks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(_tasksKey);
-    if (data == null) return _defaultTasks();
-    return (jsonDecode(data) as List).map((e) => Task.fromJson(e)).toList();
-  }
 
   Future<List<Student>> loadStudents() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1808,89 +2100,45 @@ class StorageService {
     return (jsonDecode(data) as List).map((e) => Student.fromJson(e)).toList();
   }
 
-  List<Student> _defaultStudents() => [
-        Student(id: '1', name: 'Alice Johnson', email: 'alice@example.com'),
-        Student(id: '2', name: 'Bob Smith', email: 'bob@example.com'),
-        Student(id: '3', name: 'Charlie Davis', email: 'charlie@example.com'),
-        Student(id: '4', name: 'Diana Miller', email: 'diana@example.com'),
-        Student(id: '5', name: 'Ethan Wilson', email: 'ethan@example.com'),
-      ];
-
-  List<Task> _defaultTasks() {
-    final now = DateTime.now();
-    return [
-      Task(
-        id: '1',
-        title: 'Project Planning',
-        description: 'Create detailed project plan with milestones',
-        assignedStudentId: '1',
-        startDate: now,
-        dueDate: now.add(const Duration(days: 3)),
-        priority: TaskPriority.high,
-        status: TaskStatus.backlog,
-      ),
-      Task(
-        id: '2',
-        title: 'Research Paper',
-        description: 'Write literature review section',
-        assignedStudentId: '2',
-        startDate: now,
-        dueDate: now.add(const Duration(days: 7)),
-        priority: TaskPriority.high,
-        status: TaskStatus.pending,
-      ),
-      Task(
-        id: '3',
-        title: 'Code Implementation',
-        description: 'Develop core algorithm functionality',
-        assignedStudentId: '1',
-        startDate: now,
-        dueDate: now.add(const Duration(days: 5)),
-        priority: TaskPriority.medium,
-        status: TaskStatus.inProgress,
-      ),
-      Task(
-        id: '4',
-        title: 'UI Design Review',
-        description: 'Review wireframes and mockups',
-        assignedStudentId: '3',
-        startDate: now.subtract(const Duration(days: 2)),
-        dueDate: now.add(const Duration(days: 1)),
-        priority: TaskPriority.medium,
-        status: TaskStatus.review,
-      ),
-      Task(
-        id: '5',
-        title: 'Unit Testing',
-        description: 'Write and run unit tests',
-        assignedStudentId: '4',
-        startDate: now,
-        dueDate: now.add(const Duration(days: 4)),
-        priority: TaskPriority.medium,
-        status: TaskStatus.testing,
-      ),
-      Task(
-        id: '6',
-        title: 'Documentation',
-        description: 'Write API documentation',
-        assignedStudentId: '5',
-        startDate: now.subtract(const Duration(days: 5)),
-        dueDate: now.subtract(const Duration(days: 1)),
-        priority: TaskPriority.low,
-        status: TaskStatus.done,
-        completionDate: now.subtract(const Duration(days: 1)),
-      ),
-      Task(
-        id: '7',
-        title: 'Data Analysis',
-        description: 'Analyze collected data for insights',
-        assignedStudentId: '2',
-        startDate: now.subtract(const Duration(days: 10)),
-        dueDate: now.subtract(const Duration(days: 3)),
-        priority: TaskPriority.high,
-        status: TaskStatus.archived,
-        completionDate: now.subtract(const Duration(days: 2)),
-      ),
-    ];
+  Future<List<Task>> loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString(_tasksKey);
+    if (data == null) return <Task>[];
+    return (jsonDecode(data) as List).map((e) => Task.fromJson(e)).toList();
   }
+  
+  Future<void> saveTask(Task task) async {
+    final prefs = await SharedPreferences.getInstance();
+    final tasks = await loadTasks();
+    
+    final index = tasks.indexWhere((t) => t.id == task.id);
+    if (index != -1) {
+      tasks[index] = task;
+    } else {
+      tasks.add(task);
+    }
+    
+    await prefs.setString('tasks', jsonEncode(tasks.map((t) => t.toJson()).toList()));
+  }
+  
+  Future<void> deleteTask(String taskId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final tasks = await loadTasks();
+    tasks.removeWhere((t) => t.id == taskId);
+    await prefs.setString('tasks', jsonEncode(tasks.map((t) => t.toJson()).toList()));
+  }
+  
+  Future<void> syncLocalData() async {
+    // This would sync local data with API
+    // Implementation depends on your sync strategy
+    return;
+  }
+
+  List<Student> _defaultStudents() => [
+    Student(id: '1', name: 'Alice Johnson', email: 'alice@example.com'),
+    Student(id: '2', name: 'Bob Smith', email: 'bob@example.com'),
+    Student(id: '3', name: 'Charlie Davis', email: 'charlie@example.com'),
+    Student(id: '4', name: 'Diana Miller', email: 'diana@example.com'),
+    Student(id: '5', name: 'Ethan Wilson', email: 'ethan@example.com'),
+  ];
 }
