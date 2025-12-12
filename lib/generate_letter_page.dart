@@ -190,222 +190,440 @@ class _GenerateLetterPageState extends State<GenerateLetterPage> {
     };
   }
 
-  // ────────────────────── PDF Generation (now with signature + date footer) ──────────────────────
+//   // ────────────────────── PDF Generation (now with signature + date footer) ──────────────────────
+//   Future<Uint8List> _generatePdfDocument() async {
+//   final pdf = pw.Document();
+//   final regular = pw.Font.times();
+//   final bold = pw.Font.timesBold();
+//   final italic = pw.Font.timesItalic();
+//   final template = _getLetterTemplate();
+
+//   final now = DateTime.now();
+//   final dateFormatted = DateFormat('dd MMMM yyyy, HH:mm').format(now);
+
+//   pdf.addPage(pw.Page(
+//     pageFormat: PdfPageFormat.a4,
+//     margin: const pw.EdgeInsets.all(60),
+//     build: (_) => pw.Column(
+//       crossAxisAlignment: pw.CrossAxisAlignment.start,
+//       children: [
+//         // === Header (unchanged) ===
+//         pw.Container(
+//           padding: const pw.EdgeInsets.only(bottom: 20),
+//           decoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(width: 2))),
+//           child: pw.Row(
+//             crossAxisAlignment: pw.CrossAxisAlignment.start,
+//             children: [
+//               if (_logoImage != null)
+//                 pw.Image(pw.MemoryImage(_logoImage!), width: 90, height: 90)
+//               else
+//                 pw.Container(width: 90, height: 90, color: PdfColors.blue, child: pw.Center(child: pw.Text('LOGO', style: pw.TextStyle(color: PdfColors.white, font: bold)))),
+//               pw.SizedBox(width: 25),
+//               pw.Expanded(
+//                 child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
+//                   pw.Text('Department of Computer Science and Engineering (CSE)', style: pw.TextStyle(font: bold, fontSize: 14)),
+//                   pw.Text('Jashore University of Science and Technology (JUST)', style: pw.TextStyle(font: regular, fontSize: 13)),
+//                   pw.Text('Jashore - 7408, Bangladesh', style: pw.TextStyle(font: regular, fontSize: 13)),
+//                   pw.SizedBox(height: 8),
+//                   pw.Row(mainAxisAlignment: pw.MainAxisAlignment.center, children: [
+//                     pw.Text('Email: n.amin@just.edu.bd', style: pw.TextStyle(font: regular, fontSize: 12)),
+//                     pw.SizedBox(width: 20),
+//                     pw.Text('Phone: +880 01714 - 492550', style: pw.TextStyle(font: regular, fontSize: 12)),
+//                   ]),
+//                   pw.SizedBox(height: 6),
+//                   pw.Text('https://www.cse.just.edu.bd', style: pw.TextStyle(font: bold, fontSize: 12, color: PdfColors.blue900)),
+//                 ]),
+//               ),
+//             ],
+//           ),
+//         ),
+//         pw.SizedBox(height: 10),
+
+//         // --- PDF RichText for Date ---
+//         pw.Row(
+//           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//           children: [
+//             // Left Side → Ref
+//             pw.RichText(
+//               text: pw.TextSpan(
+//                 children: [
+//                   pw.TextSpan(
+//                     text: 'Ref: ',
+//                     style: pw.TextStyle(font: bold, fontSize: 12),
+//                   ),
+//                   pw.TextSpan(
+//                     text: 'CSRL-227${100 + Random().nextInt(900)}',
+//                     style: pw.TextStyle(font: regular, fontSize: 12),
+//                   ),
+//                 ],
+//               ),
+//             ),
+
+//             // Right Side → Date
+//             pw.RichText(
+//               text: pw.TextSpan(
+//                 children: [
+//                   pw.TextSpan(
+//                     text: 'Date: ',
+//                     style: pw.TextStyle(font: bold, fontSize: 12),
+//                   ),
+//                   pw.TextSpan(
+//                     text: DateFormat('EEEE, MMMM d, yyyy').format(now),
+//                     style: pw.TextStyle(font: regular, fontSize: 12),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ],
+//         ),
+
+
+
+
+//         pw.SizedBox(height: 25),
+//         pw.Center(child: pw.Text('Letter of Recommendation', style: pw.TextStyle(font: bold, fontSize: 20))),
+//         pw.SizedBox(height: 30),
+//         pw.Text('${_salutationCtrl.text},', style: pw.TextStyle(font: regular, fontSize: 12)),
+//         pw.SizedBox(height: 20),
+        
+
+//         // Body paragraphs
+//         ...['intro', 'body1', 'body2', 'conclusion'].map((key) => pw.Padding(
+//               padding: const pw.EdgeInsets.only(bottom: 16),
+//               child: pw.RichText(
+//                 text: pw.TextSpan(
+//                   style: pw.TextStyle(font: regular, fontSize: 12, height: 1.8),
+//                   children: _buildRichTextSpans(template[key]!, [_nameCtrl.text, _researchTitleCtrl.text], bold, regular),
+//                 ),
+//                 textAlign: pw.TextAlign.justify,
+//               ),
+//             )),
+
+//         pw.Paragraph(
+//           text: 'Should you require any additional information, please do not hesitate to contact me.',
+//           style: pw.TextStyle(font: regular, fontSize: 12, height: 1.8),
+//           textAlign: pw.TextAlign.justify,
+//         ),
+
+//         pw.Spacer(),
+
+//         // ───── SIGNATURE & SIGN-OFF (UPDATED) ─────
+//         pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+//           pw.Text('Sincerely,', style: pw.TextStyle(font: bold, fontSize: 12)),
+
+//           // Signature image directly below "Sincerely,"
+//           if (_signatureImage != null) ...[
+//             pw.SizedBox(height: 10),
+
+//             // LEFT aligned signature image
+//             pw.Align(
+//               alignment: pw.Alignment.centerLeft,
+//               child: pw.Image(
+//                 pw.MemoryImage(_signatureImage!),
+//                 width: 100,  // realistic signature width
+//                 height: 40,  // small height for signature
+//                 fit: pw.BoxFit.contain,
+//               ),
+//             ),
+//             pw.SizedBox(height: 8),
+//           ],
+//           pw.Row(
+//             crossAxisAlignment: pw.CrossAxisAlignment.start,
+//             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//             children: [
+//               // LEFT → Name + Designation
+//               pw.Column(
+//                 crossAxisAlignment: pw.CrossAxisAlignment.start,
+//                 children: [
+//                   pw.SizedBox(height: _signatureImage != null ? 10 : 10),
+//                   pw.Text('Dr. Mohammad Nowsin Amin Sheikh', style: pw.TextStyle(font: bold, fontSize: 13)),
+//                   pw.Text('Assistant Professor', style: pw.TextStyle(font: regular, fontSize: 12)),
+//                   pw.Text('Department of Computer Science and Engineering', style: pw.TextStyle(font: regular, fontSize: 12)),
+//                   pw.Text('Jashore University of Science and Technology (JUST)', style: pw.TextStyle(font: regular, fontSize: 12)),
+//                   pw.Text('Jashore-7408, Bangladesh', style: pw.TextStyle(font: regular, fontSize: 12)),
+//                 ],
+//               ),
+
+//               pw.SizedBox(height: 20),
+//               // RIGHT → QR Code
+//               pw.BarcodeWidget(
+//                 barcode: pw.Barcode.qrCode(),
+//                 data: 'https://just.edu.bd/t/teacher-1549252660438',
+//                 width: 70,
+//                 height: 70,
+//               ),
+//             ],
+//           ),
+
+//         ]),
+
+//         pw.SizedBox(height: 30),
+
+//         // Footer with date
+//         // pw.Container(
+//         //   padding: const pw.EdgeInsets.only(top: 12),
+//         //   decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(width: 1.5))),
+//         //   child: pw.Center(
+//         //     child: pw.Text(
+//         //       'Generated on: $dateFormatted',
+//         //       style: pw.TextStyle(font: italic, fontSize: 9, color: PdfColors.grey700),
+//         //     ),
+//         //   ),
+//         // ),
+//         pw.Container(
+//           padding: const pw.EdgeInsets.only(top: 12),
+//           decoration: const pw.BoxDecoration(
+//             border: pw.Border(top: pw.BorderSide(width: 1.5)),
+//           ),
+//           child: pw.Column(
+//             crossAxisAlignment: pw.CrossAxisAlignment.start, // bottom text left align
+//             children: [
+
+//               // // RIGHT aligned date
+//               // pw.Row(
+//               //   mainAxisAlignment: pw.MainAxisAlignment.end,
+//               //   children: [
+//               //     pw.Text(
+//               //       'Generated on: $dateFormatted',
+//               //       style: pw.TextStyle(
+//               //         font: italic,
+//               //         fontSize: 10,
+//               //         color: PdfColors.grey700,
+//               //       ),
+//               //     ),
+//               //   ],
+//               // ),r
+//               // LEFT aligned contact info
+//               pw.Text(
+//                 'Email: n.amin@just.edu.bd,  Phone: +880 01714-492550, '
+//                 'Kazi Nazrul Islam Academic Building, Room No: 227, Jashore University of Science and Technology, Jashore 7408, Bangladesh',
+//                 style: pw.TextStyle(
+//                   font: regular,
+//                   fontSize: 10,
+//                   color: PdfColors.grey800,
+//                 ),
+//               ),
+//               // RIGHT aligned date
+//               pw.Row(
+//                 mainAxisAlignment: pw.MainAxisAlignment.end,
+//                 children: [
+//                   pw.Text(
+//                     'Generated on: $dateFormatted',
+//                     style: pw.TextStyle(
+//                       font: italic,
+//                       fontSize: 10,
+//                       color: PdfColors.grey700,
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ],
+//           ),
+//         ),
+
+//       ],
+//     ),
+//   ));
+
+//   return pdf.save();
+// }
+  // Add this method to your _GenerateLetterPageState class
+
   Future<Uint8List> _generatePdfDocument() async {
-  final pdf = pw.Document();
-  final regular = pw.Font.times();
-  final bold = pw.Font.timesBold();
-  final italic = pw.Font.timesItalic();
-  final template = _getLetterTemplate();
+    final pdf = pw.Document();
+    final regular = pw.Font.times();
+    final bold = pw.Font.timesBold();
+    final italic = pw.Font.timesItalic();
+    final template = _getLetterTemplate();
 
-  final now = DateTime.now();
-  final dateFormatted = DateFormat('dd MMMM yyyy, HH:mm').format(now);
+    final now = DateTime.now();
+    final dateFormatted = DateFormat('dd MMMM yyyy, HH:mm').format(now);
 
-  pdf.addPage(pw.Page(
-    pageFormat: PdfPageFormat.a4,
-    margin: const pw.EdgeInsets.all(60),
-    build: (_) => pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        // === Header (unchanged) ===
-        pw.Container(
-          padding: const pw.EdgeInsets.only(bottom: 20),
-          decoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(width: 2))),
-          child: pw.Row(
+    pdf.addPage(pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(60),
+      build: (context) => pw.Stack(
+        children: [
+          // WATERMARK BACKGROUND (positioned first, renders behind)
+          if (_logoImage != null)
+            pw.Positioned.fill(
+              child: pw.Center(
+                child: pw.Opacity(
+                  opacity: 0.1, // Adjust transparency (0.05 - 0.15 recommended)
+                  child: pw.Transform.rotate(
+                    angle: 0, // Slight diagonal rotation (in radians, ~-30 degrees)
+                    child: pw.Image(
+                      pw.MemoryImage(_logoImage!),
+                      width: 300, // Large watermark size
+                      height: 300,
+                      fit: pw.BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // MAIN CONTENT (on top of watermark)
+          pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              if (_logoImage != null)
-                pw.Image(pw.MemoryImage(_logoImage!), width: 90, height: 90)
-              else
-                pw.Container(width: 90, height: 90, color: PdfColors.blue, child: pw.Center(child: pw.Text('LOGO', style: pw.TextStyle(color: PdfColors.white, font: bold)))),
-              pw.SizedBox(width: 25),
-              pw.Expanded(
-                child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
-                  pw.Text('Department of Computer Science and Engineering (CSE)', style: pw.TextStyle(font: bold, fontSize: 14)),
-                  pw.Text('Jashore University of Science and Technology (JUST)', style: pw.TextStyle(font: regular, fontSize: 13)),
-                  pw.Text('Jashore - 7408, Bangladesh', style: pw.TextStyle(font: regular, fontSize: 13)),
-                  pw.SizedBox(height: 8),
-                  pw.Row(mainAxisAlignment: pw.MainAxisAlignment.center, children: [
-                    pw.Text('Email: n.amin@just.edu.bd', style: pw.TextStyle(font: regular, fontSize: 12)),
-                    pw.SizedBox(width: 20),
-                    pw.Text('Phone: +880 01714 - 492550', style: pw.TextStyle(font: regular, fontSize: 12)),
-                  ]),
-                  pw.SizedBox(height: 6),
-                  pw.Text('https://www.cse.just.edu.bd', style: pw.TextStyle(font: bold, fontSize: 12, color: PdfColors.blue900)),
-                ]),
-              ),
-            ],
-          ),
-        ),
-        pw.SizedBox(height: 10),
-
-        // --- PDF RichText for Date ---
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            // Left Side → Ref
-            pw.RichText(
-              text: pw.TextSpan(
-                children: [
-                  pw.TextSpan(
-                    text: 'Ref: ',
-                    style: pw.TextStyle(font: bold, fontSize: 12),
-                  ),
-                  pw.TextSpan(
-                    text: 'CSRL-227${100 + Random().nextInt(900)}',
-                    style: pw.TextStyle(font: regular, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-
-            // Right Side → Date
-            pw.RichText(
-              text: pw.TextSpan(
-                children: [
-                  pw.TextSpan(
-                    text: 'Date: ',
-                    style: pw.TextStyle(font: bold, fontSize: 12),
-                  ),
-                  pw.TextSpan(
-                    text: DateFormat('EEEE, MMMM d, yyyy').format(now),
-                    style: pw.TextStyle(font: regular, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-
-
-
-
-        pw.SizedBox(height: 25),
-        pw.Center(child: pw.Text('Letter of Recommendation', style: pw.TextStyle(font: bold, fontSize: 20))),
-        pw.SizedBox(height: 30),
-        pw.Text('${_salutationCtrl.text},', style: pw.TextStyle(font: regular, fontSize: 12)),
-        pw.SizedBox(height: 20),
-
-        // Body paragraphs
-        ...['intro', 'body1', 'body2', 'conclusion'].map((key) => pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 16),
-              child: pw.RichText(
-                text: pw.TextSpan(
-                  style: pw.TextStyle(font: regular, fontSize: 12, height: 1.8),
-                  children: _buildRichTextSpans(template[key]!, [_nameCtrl.text, _researchTitleCtrl.text], bold, regular),
-                ),
-                textAlign: pw.TextAlign.justify,
-              ),
-            )),
-
-        pw.Paragraph(
-          text: 'Should you require any additional information, please do not hesitate to contact me.',
-          style: pw.TextStyle(font: regular, fontSize: 12, height: 1.8),
-          textAlign: pw.TextAlign.justify,
-        ),
-
-        pw.Spacer(),
-
-        // ───── SIGNATURE & SIGN-OFF (UPDATED) ─────
-        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-          pw.Text('Sincerely,', style: pw.TextStyle(font: bold, fontSize: 12)),
-
-          // Signature image directly below "Sincerely,"
-          if (_signatureImage != null) ...[
-            pw.SizedBox(height: 10),
-
-            // LEFT aligned signature image
-            pw.Align(
-              alignment: pw.Alignment.centerLeft,
-              child: pw.Image(
-                pw.MemoryImage(_signatureImage!),
-                width: 100,  // realistic signature width
-                height: 40,  // small height for signature
-                fit: pw.BoxFit.contain,
-              ),
-            ),
-            pw.SizedBox(height: 8),
-          ],
-          // Name and designation
-          pw.SizedBox(height: _signatureImage != null ? 10 : 10),
-          pw.Text('Dr. Mohammad Nowsin Amin Sheikh', style: pw.TextStyle(font: bold, fontSize: 13)),
-          pw.Text('Assistant Professor', style: pw.TextStyle(font: regular, fontSize: 12)),
-          pw.Text('Department of Computer Science and Engineering', style: pw.TextStyle(font: regular, fontSize: 12)),
-          pw.Text('Jashore University of Science and Technology (JUST)', style: pw.TextStyle(font: regular, fontSize: 12)),
-          pw.Text('Jashore-7408, Bangladesh', style: pw.TextStyle(font: regular, fontSize: 12)),
-        ]),
-
-        pw.SizedBox(height: 30),
-
-        // Footer with date
-        // pw.Container(
-        //   padding: const pw.EdgeInsets.only(top: 12),
-        //   decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(width: 1.5))),
-        //   child: pw.Center(
-        //     child: pw.Text(
-        //       'Generated on: $dateFormatted',
-        //       style: pw.TextStyle(font: italic, fontSize: 9, color: PdfColors.grey700),
-        //     ),
-        //   ),
-        // ),
-        pw.Container(
-          padding: const pw.EdgeInsets.only(top: 12),
-          decoration: const pw.BoxDecoration(
-            border: pw.Border(top: pw.BorderSide(width: 1.5)),
-          ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start, // bottom text left align
-            children: [
-
-              // // RIGHT aligned date
-              // pw.Row(
-              //   mainAxisAlignment: pw.MainAxisAlignment.end,
-              //   children: [
-              //     pw.Text(
-              //       'Generated on: $dateFormatted',
-              //       style: pw.TextStyle(
-              //         font: italic,
-              //         fontSize: 10,
-              //         color: PdfColors.grey700,
-              //       ),
-              //     ),
-              //   ],
-              // ),r
-              // LEFT aligned contact info
-              pw.Text(
-                'Email: n.amin@just.edu.bd,  Phone: +880 01714-492550, '
-                'Kazi Nazrul Islam Academic Building, Room No: 227, Jashore University of Science and Technology, Jashore 7408, Bangladesh',
-                style: pw.TextStyle(
-                  font: regular,
-                  fontSize: 10,
-                  color: PdfColors.grey800,
+              // === Header ===
+              pw.Container(
+                padding: const pw.EdgeInsets.only(bottom: 20),
+                decoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(width: 2))),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    if (_logoImage != null)
+                      pw.Image(pw.MemoryImage(_logoImage!), width: 90, height: 90)
+                    else
+                      pw.Container(width: 90, height: 90, color: PdfColors.blue, child: pw.Center(child: pw.Text('LOGO', style: pw.TextStyle(color: PdfColors.white, font: bold)))),
+                    pw.SizedBox(width: 25),
+                    pw.Expanded(
+                      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
+                        pw.Text('Department of Computer Science and Engineering (CSE)', style: pw.TextStyle(font: bold, fontSize: 14)),
+                        pw.Text('Jashore University of Science and Technology (JUST)', style: pw.TextStyle(font: regular, fontSize: 13)),
+                        pw.Text('Jashore - 7408, Bangladesh', style: pw.TextStyle(font: regular, fontSize: 13)),
+                        pw.SizedBox(height: 8),
+                        pw.Row(mainAxisAlignment: pw.MainAxisAlignment.center, children: [
+                          pw.Text('Email: n.amin@just.edu.bd', style: pw.TextStyle(font: regular, fontSize: 12)),
+                          pw.SizedBox(width: 20),
+                          pw.Text('Phone: +880 01714 - 492550', style: pw.TextStyle(font: regular, fontSize: 12)),
+                        ]),
+                        pw.SizedBox(height: 6),
+                        pw.Text('https://www.cse.just.edu.bd', style: pw.TextStyle(font: bold, fontSize: 12, color: PdfColors.blue900)),
+                      ]),
+                    ),
+                  ],
                 ),
               ),
-              // RIGHT aligned date
+              pw.SizedBox(height: 10),
+
+              // === Ref & Date ===
               pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    'Generated on: $dateFormatted',
-                    style: pw.TextStyle(
-                      font: italic,
-                      fontSize: 10,
-                      color: PdfColors.grey700,
+                  pw.RichText(
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(text: 'Ref: ', style: pw.TextStyle(font: bold, fontSize: 12)),
+                        pw.TextSpan(text: 'CSRL-227${100 + Random().nextInt(900)}', style: pw.TextStyle(font: regular, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  pw.RichText(
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(text: 'Date: ', style: pw.TextStyle(font: bold, fontSize: 12)),
+                        pw.TextSpan(text: DateFormat('EEEE, MMMM d, yyyy').format(now), style: pw.TextStyle(font: regular, fontSize: 12)),
+                      ],
                     ),
                   ),
                 ],
               ),
+
+              pw.SizedBox(height: 25),
+              pw.Center(child: pw.Text('Letter of Recommendation', style: pw.TextStyle(font: bold, fontSize: 20))),
+              pw.SizedBox(height: 30),
+              pw.Text('${_salutationCtrl.text},', style: pw.TextStyle(font: regular, fontSize: 12)),
+              pw.SizedBox(height: 20),
+
+              // === Body paragraphs ===
+              ...['intro', 'body1', 'body2', 'conclusion'].map((key) => pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 16),
+                    child: pw.RichText(
+                      text: pw.TextSpan(
+                        style: pw.TextStyle(font: regular, fontSize: 12, height: 1.8),
+                        children: _buildRichTextSpans(template[key]!, [_nameCtrl.text, _researchTitleCtrl.text], bold, regular),
+                      ),
+                      textAlign: pw.TextAlign.justify,
+                    ),
+                  )),
+
+              pw.Paragraph(
+                text: 'Should you require any additional information, please do not hesitate to contact me.',
+                style: pw.TextStyle(font: regular, fontSize: 12, height: 1.8),
+                textAlign: pw.TextAlign.justify,
+              ),
+
+              pw.Spacer(),
+
+              // === Signature ===
+              pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                pw.Text('Sincerely,', style: pw.TextStyle(font: bold, fontSize: 12)),
+                if (_signatureImage != null) ...[
+                  pw.SizedBox(height: 10),
+                  pw.Align(
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Image(
+                      pw.MemoryImage(_signatureImage!),
+                      width: 100,
+                      height: 40,
+                      fit: pw.BoxFit.contain,
+                    ),
+                  ),
+                ] else ...[
+                  pw.SizedBox(height: 10),
+                  pw.Container(
+                    width: 150,
+                    height: 40,
+                    decoration: pw.BoxDecoration(
+                      
+                    ),
+                  ),
+                ],
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.SizedBox(height: _signatureImage != null ? 10 : 10),
+                        pw.Text('Dr. Mohammad Nowsin Amin Sheikh', style: pw.TextStyle(font: bold, fontSize: 13)),
+                        pw.Text('Assistant Professor', style: pw.TextStyle(font: regular, fontSize: 12)),
+                        pw.Text('Department of Computer Science and Engineering', style: pw.TextStyle(font: regular, fontSize: 12)),
+                        pw.Text('Jashore University of Science and Technology (JUST)', style: pw.TextStyle(font: regular, fontSize: 12)),
+                        pw.Text('Jashore-7408, Bangladesh', style: pw.TextStyle(font: regular, fontSize: 12)),
+                      ],
+                    ),
+                    pw.SizedBox(height: 20),
+                    pw.BarcodeWidget(barcode: pw.Barcode.qrCode(), data: 'https://just.edu.bd/t/teacher-1549252660438', width: 70, height: 70),
+                  ],
+                ),
+              ]),
+
+              pw.SizedBox(height: 30),
+
+              // === Footer ===
+              pw.Container(
+                padding: const pw.EdgeInsets.only(top: 12),
+                decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(width: 1.5))),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Email: n.amin@just.edu.bd,  Phone: +880 01714-492550, '
+                      'Kazi Nazrul Islam Academic Building, Room No: 227, Jashore University of Science and Technology, Jashore 7408, Bangladesh',
+                      style: pw.TextStyle(font: regular, fontSize: 10, color: PdfColors.grey800),
+                    ),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Text('Generated on: $dateFormatted', style: pw.TextStyle(font: italic, fontSize: 10, color: PdfColors.grey700)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
+        ],
+      ),
+    ));
 
-      ],
-    ),
-  ));
-
-  return pdf.save();
-}
-
+    return pdf.save();
+  }
   List<pw.TextSpan> _buildRichTextSpans(String text, List<String> boldWords, pw.Font boldFont, pw.Font regularFont) {
     final spans = <pw.TextSpan>[];
     var remaining = text;
