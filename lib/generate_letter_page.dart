@@ -515,7 +515,7 @@ class _GenerateLetterPageState extends State<GenerateLetterPage> {
                     text: pw.TextSpan(
                       children: [
                         pw.TextSpan(text: 'Date: ', style: pw.TextStyle(font: bold, fontSize: 12)),
-                        pw.TextSpan(text: DateFormat('EEEE, MMMM d, yyyy').format(now), style: pw.TextStyle(font: regular, fontSize: 12)),
+                        pw.TextSpan(text: DateFormat('MMMM d, yyyy').format(now), style: pw.TextStyle(font: regular, fontSize: 12)),
                       ],
                     ),
                   ),
