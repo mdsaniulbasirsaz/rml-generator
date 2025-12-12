@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -238,31 +240,43 @@ class _GenerateLetterPageState extends State<GenerateLetterPage> {
         pw.SizedBox(height: 10),
 
         // --- PDF RichText for Date ---
-        pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pw.RichText(
-            text: pw.TextSpan(
-              children: [
-                // "Date:" → Bold
-                pw.TextSpan(
-                  text: 'Date: ',
-                  style: pw.TextStyle(
-                    font: bold,
-                    fontSize: 12,
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            // Left Side → Ref
+            pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: 'Ref: ',
+                    style: pw.TextStyle(font: bold, fontSize: 12),
                   ),
-                ),
-                // Date → Normal
-                pw.TextSpan(
-                  text: DateFormat('EEEE, MMMM d, yyyy').format(now),
-                  style: pw.TextStyle(
-                    font: regular,
-                    fontSize: 12,
+                  pw.TextSpan(
+                    text: 'CSRL-227${100 + Random().nextInt(900)}',
+                    style: pw.TextStyle(font: regular, fontSize: 12),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+
+            // Right Side → Date
+            pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: 'Date: ',
+                    style: pw.TextStyle(font: bold, fontSize: 12),
+                  ),
+                  pw.TextSpan(
+                    text: DateFormat('EEEE, MMMM d, yyyy').format(now),
+                    style: pw.TextStyle(font: regular, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
+
 
 
 
@@ -343,6 +357,30 @@ class _GenerateLetterPageState extends State<GenerateLetterPage> {
             crossAxisAlignment: pw.CrossAxisAlignment.start, // bottom text left align
             children: [
 
+              // // RIGHT aligned date
+              // pw.Row(
+              //   mainAxisAlignment: pw.MainAxisAlignment.end,
+              //   children: [
+              //     pw.Text(
+              //       'Generated on: $dateFormatted',
+              //       style: pw.TextStyle(
+              //         font: italic,
+              //         fontSize: 10,
+              //         color: PdfColors.grey700,
+              //       ),
+              //     ),
+              //   ],
+              // ),r
+              // LEFT aligned contact info
+              pw.Text(
+                'Email: n.amin@just.edu.bd,  Phone: +880 01714-492550, '
+                'Kazi Nazrul Islam Academic Building, Room No: 227, Jashore University of Science and Technology, Jashore 7408, Bangladesh',
+                style: pw.TextStyle(
+                  font: regular,
+                  fontSize: 10,
+                  color: PdfColors.grey800,
+                ),
+              ),
               // RIGHT aligned date
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.end,
@@ -356,19 +394,6 @@ class _GenerateLetterPageState extends State<GenerateLetterPage> {
                     ),
                   ),
                 ],
-              ),
-
-              pw.SizedBox(height: 4),
-
-              // LEFT aligned contact info
-              pw.Text(
-                'Email: n.amin@just.edu.bd,  Phone: +880 01714-492550, '
-                'Kazi Nazrul Islam Academic Building, Room No: 227, Jashore University of Science and Technology, Jashore 7408, Bangladesh',
-                style: pw.TextStyle(
-                  font: regular,
-                  fontSize: 10,
-                  color: PdfColors.grey800,
-                ),
               ),
             ],
           ),
